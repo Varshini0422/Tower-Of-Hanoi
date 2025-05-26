@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Tower of Hanoi UI - Needle Poles</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      background: linear-gradient(to right, #d8b4fe, #fbcfe8);
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      justify-content: flex-start;
+      padding: 40px 20px;
+    }
+
+    h1 {
+      font-size: 3rem;
+      color: white;
+      text-shadow: 2px 2px 4px #00000050;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+
+    .controls {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-bottom: 30px;
+    }
+
+    input[type=number] {
+      padding: 10px;
+      font-size: 1rem;
+      border-radius: 10px;
+      border: 2px solid #7c3aed;
+      width: 100px;
+      text-align: center;
+    }
+
+    .game-container {
+      display: flex;
+      justify-content: space-evenly;
+      align-items: flex-end;
+      width: 100%;
+      max-width: 800px;
+      margin: 0 auto 40px;
+      padding: 0 10px;
+      user-select: none;
+    }
+
+    .tower {
+      flex: 1;
+      max-width: 150px;
+      height: 320px;
+      position: relative;
+      display: flex;
+      flex-direction: column-reverse;
+      align-items: center;
+      padding-bottom: 10px;
+      margin: 0 10px;
+      cursor: pointer;
+    }
+
+    /* Needle pole */
+    .needle {
+      position: absolute;
+      bottom: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 6px;
+      height: 250px;
+      background-color: #7c3aed;
+      border-radius: 3px;
+      box-shadow: 0 0 8px #a78bfa88;
+      z-index: 0;
+    }
+
+    .disk {
+      height: 24px;
+      border-radius: 12px;
+      margin-bottom: 6px;
+      background: #6366f1;
+      color: white;
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+      cursor: grab;
+      user-select: none;
+      position: relative;
+      z-index: 1;
+    }
+
+    .disk:active {
+      cursor: grabbing;
+    }
+
+    .reset-button {
+      padding: 12px 24px;
+      background-color: #4f46e5;
+      color: white;
+      font-size: 1rem;
+      border: none;
+      border-radius: 12px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+
+    .reset-button:hover {
+      background-color: #4338ca;
+    }
+
+    @media (max-width: 600px) {
+      .game-container {
+        flex-direction: column;
+        align-items: center;
+        height: auto;
+      }
+
+      .tower {
+        max-width: 80%;
+        margin: 10px 0;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Tower of Hanoi</h1>
+
+  <div class="controls">
+    <input type="number" id="disk-count" min="1" max="6" value="3" />
+    <button class="reset-button" onclick="generateDisks()">Start</button>
+  </div>
+
+  <div class="game-container">
+    <div class="tower" id="tower-0">
+      <div class="needle"></div>
+    </div>
+    <div class="tower" id="tower-1">
+      <div class="needle"></div>
+    </div>
+    <div class="tower" id="tower-2">
+      <div class="needle"></div>
+    </div>
+  </div>
+
+  <script>
+    let towers = [[], [], []]; // stores disk sizes for each tower
+
+    function generateDisks() {
+      const count = parseInt(document.getElementById('disk-count').value);
+      if (isNaN(count) || count < 1 || count > 6) {
+        alert('Please enter a number between 1 and 6.');
+        return;
+      }
+
+      towers = [[], [], []];
+      for (let i = count; i >= 1; i--) {
+        towers[0].push(i);
+      }
+      renderTowers();
+    }
+
+    function renderTowers() {
+      for (let i = 0; i < 3; i++) {
+        const towerDiv = document.getElementById('tower-' + i);
+        // Remove all disks but keep needle
+        towerDiv.querySelectorAll('.disk').forEach(disk => disk.remove());
+
+        towers[i].forEach(diskSize => {
+          const disk = document.createElement('div');
+          disk.className = 'disk';
+          disk.textContent = diskSize;
+          disk.style.width = `${diskSize * 40}px`;
+          disk.dataset.size = diskSize;
+          disk.dataset.tower = i;
+
+          // Only the top disk is draggable
+          if (diskSize === towers[i][towers[i].length - 1]) {
+            disk.draggable = true;
+            disk.addEventListener('dragstart', dragStart);
+          }
+          towerDiv.appendChild(disk);
+        });
+      }
+    }
+
+    let draggedDiskSize = null;
+    let fromTower = null;
+
+    function dragStart(e) {
+      draggedDiskSize = parseInt(e.target.dataset.size);
+      fromTower = parseInt(e.target.dataset.tower);
+      e.dataTransfer.setData('text/plain', draggedDiskSize);
+    }
+
+    function allowDrop(e) {
+      e.preventDefault();
+    }
+
+    function drop(e) {
+      e.preventDefault();
+      const toTower = parseInt(e.currentTarget.dataset.tower);
+
+      if (toTower === fromTower) return; // no move
+
+      const toTowerDisks = towers[toTower];
+      // Check move validity: target empty or top disk bigger
+      if (
+        toTowerDisks.length === 0 ||
+        toTowerDisks[toTowerDisks.length - 1] > draggedDiskSize
+      ) {
+        towers[fromTower].pop();
+        towers[toTower].push(draggedDiskSize);
+        renderTowers();
+        checkWin();
+      } else {
+        alert('Invalid move: Cannot place larger disk on smaller disk.');
+      }
+    }
+
+    function checkWin() {
+      const diskCount = parseInt(document.getElementById('disk-count').value);
+      if (towers[2].length === diskCount) {
+        setTimeout(() => alert('🎉 Congratulations! You solved the puzzle!'), 100);
+      }
+    }
+
+    function setupDragDrop() {
+      for (let i = 0; i < 3; i++) {
+        const towerDiv = document.getElementById('tower-' + i);
+        towerDiv.dataset.tower = i;
+        towerDiv.addEventListener('dragover', allowDrop);
+        towerDiv.addEventListener('drop', drop);
+      }
+    }
+
+    window.onload = () => {
+      generateDisks();
+      setupDragDrop();
+    };
+  </script>
+
+</body>
+</html>
